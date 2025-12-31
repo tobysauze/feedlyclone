@@ -4,7 +4,8 @@
     "private": true,
     "scripts": {
         "dev": "ts-node -r dotenv/config src/index.ts",
-        "build": "tsc"
+        "build": "tsc",
+        "start": "ts-node -r dotenv/config src/index.ts"
     },
     "dependencies": {
         "@feedly-clone/db": "*",
