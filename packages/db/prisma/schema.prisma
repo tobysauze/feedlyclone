@@ -1,0 +1,188 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+  userArticles  UserArticle[]
+  boards        Board[]
+  categories    Category[]
+}
+
+model UserArticle {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  
+  isRead    Boolean  @default(false)
+  isSaved   Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, articleId])
+}
+
+model Feed {
+  id            String         @id @default(uuid())
+  url           String         @unique
+  title         String?
+  description   String?
+  siteUrl       String?
+  iconUrl       String?
+  
+  // Crawling metadata
+  lastCrawledAt DateTime?
+  nextCrawlAt   DateTime?      @default(now())
+  errorCount    Int            @default(0)
+  etag          String?        // For conditional GET
+  lastModified  String?        // For conditional GET (header)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  articles      Article[]
+  subscriptions Subscription[]
+}
+
+model Article {
+  id          String   @id @default(uuid())
+  title       String
+  content     String?  // The full HTML content
+  summary     String?  // Short snippet
+  aiSummary   String?  // AI generated summary
+  imageUrl    String?  // Header image URL
+  link        String   // URL to original post
+  guid        String   // Unique ID from RSS feed
+  pubDate     DateTime?
+  
+  feedId      String
+  feed        Feed     @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([feedId, guid]) // Ensure we don't save duplicates
+  @@index([pubDate])       // For fast chronological sorting
+
+  userArticles UserArticle[]
+  boardItems   BoardItem[]
+  entities     Entity[]
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  feedId    String
+  feed      Feed     @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, feedId])
+}
+
+model Category {
+  id        String         @id @default(uuid())
+  name      String
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  subscriptions Subscription[]
+
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([userId, name])
+}
+
+model Board {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  items       BoardItem[]
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model BoardItem {
+  id        String   @id @default(uuid())
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  
+  notes     String?
+  
+  createdAt DateTime @default(now())
+
+  @@unique([boardId, articleId])
+}
+
+model Entity {
+  id          String         @id @default(uuid())
+  name        String
+  type        EntityType
+  description String?
+  
+  growth      GrowthStatus   @default(STABLE)
+  size        EntitySize     @default(KNOWN)
+  
+  articles    Article[]
+  metrics     EntityMetric[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model EntityMetric {
+  id        String   @id @default(uuid())
+  entityId  String
+  entity    Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  
+  date      DateTime
+  count     Int      @default(0)
+  sentiment Float    @default(0) // -1.0 to 1.0
+  
+  @@unique([entityId, date])
+}
+
+enum EntityType {
+  COMPANY
+  TREND
+  TECHNOLOGY
+  PERSON
+  LOCATION
+  OTHER
+}
+
+enum GrowthStatus {
+  EXPLODING
+  SURGING
+  GROWING
+  STABLE
+  DECLINING
+}
+
+enum EntitySize {
+  MAINSTREAM
+  KNOWN
+  NICHE
+}
