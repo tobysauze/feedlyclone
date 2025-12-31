@@ -1,4 +1,5 @@
 'use client';
+import { Suspense } from 'react';
 
 import Link from 'next/link';
 import FeedList from './FeedList';
@@ -48,7 +49,9 @@ export default function Sidebar() {
 
                 <div className="my-4 border-t border-gray-100" />
 
-                <FeedList />
+                <Suspense fallback={<div className="p-4 text-xs text-gray-500">Loading feeds...</div>}>
+                    <FeedList />
+                </Suspense>
             </div>
 
             <AddFeed />
