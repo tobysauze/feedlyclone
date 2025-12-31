@@ -223,7 +223,7 @@ server.get<{ Querystring: { feedId?: string, categoryId?: string, type?: 'saved'
         }
     });
 
-    return articles.map(article => ({
+    return articles.map((article: any) => ({
         ...article,
         isRead: article.userArticles?.[0]?.isRead ?? false,
         isSaved: article.userArticles?.[0]?.isSaved ?? false,
